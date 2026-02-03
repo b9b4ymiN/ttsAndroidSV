@@ -1,0 +1,80 @@
+<svg width="512" height="512" viewBox="0 0 512 512" xmlns="http://www.w3.org/2000/svg">
+  <!-- Gradient definition -->
+  <defs>
+    <linearGradient id="bgGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#4169E1;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#5B7FE8;stop-opacity:1" />
+    </linearGradient>
+    <filter id="shadow" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur in="SourceAlpha" stdDeviation="8"/>
+      <feOffset dx="0" dy="4" result="offsetblur"/>
+      <feComponentTransfer>
+        <feFuncA type="linear" slope="0.2"/>
+      </feComponentTransfer>
+      <feMerge>
+        <feMergeNode/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+  </defs>
+  
+  <!-- Background circle -->
+  <circle cx="256" cy="256" r="240" fill="url(#bgGradient)"/>
+  
+  <!-- Microphone group -->
+  <g transform="translate(256, 256)" filter="url(#shadow)">
+    <!-- Microphone body -->
+    <rect x="-45" y="-120" width="90" height="120" rx="45" fill="#FFFFFF"/>
+    
+    <!-- Microphone base arc -->
+    <path d="M -80 20 Q -80 80 0 80 Q 80 80 80 20" 
+          stroke="#FFFFFF" 
+          stroke-width="20" 
+          stroke-linecap="round"
+          fill="none"/>
+    
+    <!-- Microphone stand -->
+    <line x1="0" y1="80" x2="0" y2="140" 
+          stroke="#FFFFFF" 
+          stroke-width="20" 
+          stroke-linecap="round"/>
+    
+    <!-- Microphone stand base -->
+    <line x1="-50" y1="140" x2="50" y2="140" 
+          stroke="#FFFFFF" 
+          stroke-width="20" 
+          stroke-linecap="round"/>
+    
+    <!-- Sound waves - left inner -->
+    <path d="M -110 -80 Q -140 -80 -140 -40 Q -140 0 -110 0" 
+          stroke="#FFFFFF" 
+          stroke-width="18" 
+          stroke-linecap="round"
+          stroke-opacity="0.9"
+          fill="none"/>
+    
+    <!-- Sound waves - right inner -->
+    <path d="M 110 -80 Q 140 -80 140 -40 Q 140 0 110 0" 
+          stroke="#FFFFFF" 
+          stroke-width="18" 
+          stroke-linecap="round"
+          stroke-opacity="0.9"
+          fill="none"/>
+    
+    <!-- Sound waves - left outer -->
+    <path d="M -150 -100 Q -190 -100 -190 -40 Q -190 20 -150 20" 
+          stroke="#FFFFFF" 
+          stroke-width="14" 
+          stroke-linecap="round"
+          stroke-opacity="0.6"
+          fill="none"/>
+    
+    <!-- Sound waves - right outer -->
+    <path d="M 150 -100 Q 190 -100 190 -40 Q 190 20 150 20" 
+          stroke="#FFFFFF" 
+          stroke-width="14" 
+          stroke-linecap="round"
+          stroke-opacity="0.6"
+          fill="none"/>
+  </g>
+</svg>

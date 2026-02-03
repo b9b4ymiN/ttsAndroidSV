@@ -1,0 +1,20 @@
+# Android SDK Location
+# This file was generated automatically
+# Replace <YourUsername> with your actual Windows username
+# Or set ANDROID_HOME environment variable instead
+
+# Windows default location:
+sdk.dir=C:\\Users\\<YourUsername>\\AppData\\Local\\Android\\Sdk
+
+# Alternative locations (uncomment if needed):
+# sdk.dir=C:\\Android\\sdk
+# sdk.dir=C:\\android-sdk
+
+# Linux/Mac:
+# sdk.dir=/home/<username>/Android/Sdk
+# sdk.dir=/Users/<username>/Library/Android/sdk
+
+# After editing:
+# 1. Replace <YourUsername> with your actual username
+# 2. Use double backslashes (\\) for Windows paths
+# 3. Remove this comment block
