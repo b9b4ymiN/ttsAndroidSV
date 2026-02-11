@@ -19,6 +19,8 @@ function App(): React.JSX.Element {
   const [serviceRunning, setServiceRunning] = useState(false);
   const [lastStatus, setLastStatus] = useState('Unknown');
   const [testText, setTestText] = useState('สวัสดีครับ');
+  const [speechSpeed, setSpeechSpeed] = useState(1.0);
+  const [speechPitch, setSpeechPitch] = useState(1.0);
   const [serverUrl, setServerUrl] = useState('http://localhost:8765');
   const [deviceIp, setDeviceIp] = useState('Detecting...');
   const [logs, setLogs] = useState<string[]>([]);
@@ -105,14 +107,18 @@ function App(): React.JSX.Element {
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({text: testText}),
+        body: JSON.stringify({
+          text: testText,
+          speed: speechSpeed,
+          pitch: speechPitch,
+        }),
       });
 
       const result = await response.json();
 
       if (response.ok) {
-        addLog(`🔊 Sent: "${testText.substring(0, 30)}..." - Queue: ${result.queueSize}`);
-        Alert.alert('Success', `Text queued for speech!\nQueue size: ${result.queueSize}`);
+        addLog(`🔊 Sent: "${testText.substring(0, 30)}..." (${result.speed}x, pitch ${result.pitch}) - Queue: ${result.queueSize}`);
+        Alert.alert('Success', `Text queued for speech!\nSpeed: ${result.speed}x\nPitch: ${result.pitch}\nQueue size: ${result.queueSize}`);
       } else {
         addLog(`❌ Error: ${result.error || 'Unknown error'}`);
         Alert.alert('Error', result.error || 'Failed to send request');
@@ -243,6 +249,63 @@ function App(): React.JSX.Element {
             onChangeText={setTestText}
             multiline
           />
+          
+          {/* Speed Control */}
+          <View style={styles.controlRow}>
+            <Text style={styles.controlLabel}>🚀 Speed: {speechSpeed.toFixed(1)}x</Text>
+            <View style={styles.sliderContainer}>
+              <TouchableOpacity onPress={() => setSpeechSpeed(Math.max(0.5, speechSpeed - 0.1))}>
+                <Text style={styles.sliderButton}>-</Text>
+              </TouchableOpacity>
+              <View style={styles.sliderTrack}>
+                <View style={[styles.sliderFill, {width: `${((speechSpeed - 0.5) / 1.5) * 100}%`}]} />
+                <Text style={styles.sliderValue}>{speechSpeed.toFixed(1)}x</Text>
+              </View>
+              <TouchableOpacity onPress={() => setSpeechSpeed(Math.min(2.0, speechSpeed + 0.1))}>
+                <Text style={styles.sliderButton}>+</Text>
+              </TouchableOpacity>
+            </View>
+            <View style={styles.presetButtons}>
+              <TouchableOpacity style={styles.presetButton} onPress={() => setSpeechSpeed(0.7)}>
+                <Text style={styles.presetButtonText}>Slow</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={styles.presetButton} onPress={() => setSpeechSpeed(1.0)}>
+                <Text style={styles.presetButtonText}>Normal</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={styles.presetButton} onPress={() => setSpeechSpeed(1.5)}>
+                <Text style={styles.presetButtonText}>Fast</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+          
+          {/* Pitch Control */}
+          <View style={styles.controlRow}>
+            <Text style={styles.controlLabel}>🎵 Pitch: {speechPitch.toFixed(1)}</Text>
+            <View style={styles.sliderContainer}>
+              <TouchableOpacity onPress={() => setSpeechPitch(Math.max(0.5, speechPitch - 0.1))}>
+                <Text style={styles.sliderButton}>-</Text>
+              </TouchableOpacity>
+              <View style={styles.sliderTrack}>
+                <View style={[styles.sliderFill, {width: `${((speechPitch - 0.5) / 1.5) * 100}%`}]} />
+                <Text style={styles.sliderValue}>{speechPitch.toFixed(1)}</Text>
+              </View>
+              <TouchableOpacity onPress={() => setSpeechPitch(Math.min(2.0, speechPitch + 0.1))}>
+                <Text style={styles.sliderButton}>+</Text>
+              </TouchableOpacity>
+            </View>
+            <View style={styles.presetButtons}>
+              <TouchableOpacity style={styles.presetButton} onPress={() => setSpeechPitch(0.8)}>
+                <Text style={styles.presetButtonText}>Low</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={styles.presetButton} onPress={() => setSpeechPitch(1.0)}>
+                <Text style={styles.presetButtonText}>Normal</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={styles.presetButton} onPress={() => setSpeechPitch(1.2)}>
+                <Text style={styles.presetButtonText}>High</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+          
           <TouchableOpacity
             style={[styles.button, styles.speakButton]}
             onPress={sendTestRequest}>
@@ -487,6 +550,70 @@ const styles = StyleSheet.create({
     textAlignVertical: 'top',
     borderWidth: 1,
     borderColor: '#2a2a4e',
+  },
+  controlRow: {
+    marginBottom: 16,
+  },
+  controlLabel: {
+    fontSize: 16,
+    color: '#fff',
+    fontWeight: 'bold',
+    marginBottom: 8,
+  },
+  sliderContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    marginBottom: 8,
+  },
+  sliderButton: {
+    fontSize: 24,
+    color: '#4169e1',
+    fontWeight: 'bold',
+    paddingHorizontal: 12,
+    paddingVertical: 4,
+  },
+  sliderTrack: {
+    flex: 1,
+    height: 40,
+    backgroundColor: '#1a1a2e',
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#2a2a4e',
+    justifyContent: 'center',
+    overflow: 'hidden',
+  },
+  sliderFill: {
+    position: 'absolute',
+    left: 0,
+    top: 0,
+    bottom: 0,
+    backgroundColor: '#4169e1',
+    opacity: 0.3,
+  },
+  sliderValue: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: 'bold',
+    textAlign: 'center',
+    zIndex: 1,
+  },
+  presetButtons: {
+    flexDirection: 'row',
+    gap: 8,
+  },
+  presetButton: {
+    backgroundColor: '#2a2a4e',
+    paddingHorizontal: 14,
+    paddingVertical: 6,
+    borderRadius: 6,
+    borderWidth: 1,
+    borderColor: '#4169e1',
+  },
+  presetButtonText: {
+    color: '#4169e1',
+    fontSize: 12,
+    fontWeight: 'bold',
   },
   quickButtons: {
     flexDirection: 'row',

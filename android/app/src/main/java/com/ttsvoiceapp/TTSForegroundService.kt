@@ -16,12 +16,19 @@ import org.json.JSONObject
 import java.util.*
 import java.util.concurrent.ConcurrentLinkedQueue
 
+// Data class to hold speech parameters
+data class SpeechRequest(
+    val text: String,
+    val speed: Float = 1.0f,
+    val pitch: Float = 1.0f
+)
+
 class TTSForegroundService : Service(), TextToSpeech.OnInitListener {
     
     private var httpServer: TTSHttpServer? = null
     private var textToSpeech: TextToSpeech? = null
     private var wakeLock: PowerManager.WakeLock? = null
-    private val ttsQueue = ConcurrentLinkedQueue<String>()
+    private val ttsQueue = ConcurrentLinkedQueue<SpeechRequest>()
     private var isSpeaking = false
     private var ttsInitialized = false
     
@@ -272,26 +279,30 @@ class TTSForegroundService : Service(), TextToSpeech.OnInitListener {
         }
     }
     
-    fun addToTTSQueue(text: String) {
-        ttsQueue.offer(text)
-        Log.d(TAG, "Added to queue: $text (Queue size: ${ttsQueue.size})")
+    fun addToTTSQueue(request: SpeechRequest) {
+        ttsQueue.offer(request)
+        Log.d(TAG, "Added to queue: ${request.text} (speed: ${request.speed}x, pitch: ${request.pitch}) - Queue size: ${ttsQueue.size}")
         processNextInQueue()
     }
     
     private fun processNextInQueue() {
         if (!isSpeaking && ttsQueue.isNotEmpty() && ttsInitialized) {
-            val text = ttsQueue.poll()
-            if (text != null) {
+            val request = ttsQueue.poll()
+            if (request != null) {
                 isSpeaking = true
-                speakText(text)
+                speakText(request)
             }
         }
     }
     
-    private fun speakText(text: String) {
+    private fun speakText(request: SpeechRequest) {
         textToSpeech?.let { tts ->
+            // Apply speech parameters BEFORE language detection
+            tts.setSpeechRate(request.speed)
+            tts.setPitch(request.pitch)
+            
             // Detect language - if contains Thai characters, use Thai, otherwise English
-            val hasThai = text.any { it in '\u0E00'..'\u0E7F' }
+            val hasThai = request.text.any { it in '\u0E00'..'\u0E7F' }
             
             val locale = if (hasThai) {
                 // Use modern Locale API for Thai
@@ -348,12 +359,13 @@ class TTSForegroundService : Service(), TextToSpeech.OnInitListener {
                 putString(TextToSpeech.Engine.KEY_PARAM_UTTERANCE_ID, utteranceId)
             }
             
-            val speakResult = tts.speak(text, TextToSpeech.QUEUE_FLUSH, params, utteranceId)
+            val speakResult = tts.speak(request.text, TextToSpeech.QUEUE_FLUSH, params, utteranceId)
             
             if (speakResult == TextToSpeech.SUCCESS) {
-                updateNotification("Speaking ($langName): ${text.take(30)}...")
-                lastStatus = "Speaking ($langName)"
-                Log.d(TAG, "Speaking ($langName): $text")
+                val speedInfo = if (request.speed != 1.0f) " ${request.speed}x" else ""
+                updateNotification("Speaking ($langName$speedInfo): ${request.text.take(25)}...")
+                lastStatus = "Speaking ($langName) at ${request.speed}x speed"
+                Log.d(TAG, "Speaking ($langName) at speed ${request.speed}x, pitch ${request.pitch}: ${request.text}")
             } else {
                 Log.e(TAG, "Failed to speak text, error code: $speakResult")
                 updateNotification("Error: Failed to speak")
@@ -407,6 +419,8 @@ class TTSForegroundService : Service(), TextToSpeech.OnInitListener {
                 
                 val jsonObject = JSONObject(bodyString)
                 val text = jsonObject.optString("text", "")
+                val speed = jsonObject.optDouble("speed", 1.0).toFloat()
+                val pitch = jsonObject.optDouble("pitch", 1.0).toFloat()
                 
                 if (text.isEmpty()) {
                     return newFixedLengthResponse(
@@ -416,6 +430,10 @@ class TTSForegroundService : Service(), TextToSpeech.OnInitListener {
                     )
                 }
                 
+                // Clamp speed and pitch to valid Android TTS ranges (0.5 - 2.0)
+                val clampedSpeed = speed.coerceIn(0.5f, 2.0f)
+                val clampedPitch = pitch.coerceIn(0.5f, 2.0f)
+                
                 if (!ttsInitialized) {
                     return newFixedLengthResponse(
                         Response.Status.SERVICE_UNAVAILABLE,
@@ -424,12 +442,15 @@ class TTSForegroundService : Service(), TextToSpeech.OnInitListener {
                     )
                 }
                 
-                // Add to queue
-                addToTTSQueue(text)
+                // Create speech request with parameters
+                val request = SpeechRequest(text, clampedSpeed, clampedPitch)
+                addToTTSQueue(request)
                 
                 val response = JSONObject().apply {
                     put("status", "queued")
                     put("text", text)
+                    put("speed", clampedSpeed)
+                    put("pitch", clampedPitch)
                     put("queueSize", ttsQueue.size + (if (isSpeaking) 1 else 0))
                     put("message", "Text added to speech queue")
                 }

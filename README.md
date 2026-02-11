@@ -134,7 +134,9 @@ cd android
 **Request:**
 ```json
 {
-  "text": "สวัสดีครับ ทดสอบภาษาไทย"
+  "text": "สวัสดีครับ ทดสอบภาษาไทย",
+  "speed": 1.0,    // Optional: Speech speed (0.5 - 2.0), default: 1.0
+  "pitch": 1.0     // Optional: Voice pitch (0.5 - 2.0), default: 1.0
 }
 ```
 
@@ -143,6 +145,8 @@ cd android
 {
   "status": "queued",
   "text": "สวัสดีครับ ทดสอบภาษาไทย",
+  "speed": 1.0,
+  "pitch": 1.0,
   "queueSize": 1,
   "message": "Text added to speech queue"
 }
@@ -152,15 +156,20 @@ cd android
 
 **Example using curl:**
 ```bash
-# Thai text
+# Thai text with normal speed
 curl -X POST http://192.168.1.100:8765/speak \
   -H "Content-Type: application/json; charset=utf-8" \
   -d '{"text":"สวัสดีครับ ยินดีต้อนรับ"}'
 
-# English text
+# Thai text with slow speed (0.7x)
+curl -X POST http://192.168.1.100:8765/speak \
+  -H "Content-Type: application/json; charset=utf-8" \
+  -d '{"text":"สวัสดีครับ พูดช้า","speed":0.7}'
+
+# English text with fast speed (1.5x) and higher pitch
 curl -X POST http://192.168.1.100:8765/speak \
   -H "Content-Type: application/json" \
-  -d '{"text":"Hello world, welcome to TTS service
+  -d '{"text":"Hello world, fast speech","speed":1.5,"pitch":1.2}'
 
 **Response:**
 ```json
@@ -183,15 +192,24 @@ curl -X POST http://192.168.1.100:8765/speak \
 ```python
 import requests
 
+# Basic usage
 response = requests.post(
     'http://192.168.1.100:8765/speak',
     json={'text': 'สวัสดีครับ'}
+)
+print(response.json())
+
+# With speed control
+response = requests.post(
+    'http://192.168.1.100:8765/speak',
+    json={'text': 'พูดช้า', 'speed': 0.7, 'pitch': 0.9}
 )
 print(response.json())
 ```
 
 **Example using JavaScript:**
 ```javascript
+// Basic usage
 fetch('http://192.168.1.100:8765/speak', {
   method: 'POST',
   headers: {'Content-Type': 'application/json'},
@@ -199,7 +217,36 @@ fetch('http://192.168.1.100:8765/speak', {
 })
 .then(res => res.json())
 .then(data => console.log(data));
+
+// With speed and pitch control
+fetch('http://192.168.1.100:8765/speak', {
+  method: 'POST',
+  headers: {'Content-Type': 'application/json'},
+  body: JSON.stringify({
+    text: 'Hello World',
+    speed: 1.5,  // 1.5x faster
+    pitch: 1.2   // Higher pitch
+  })
+})
+.then(res => res.json())
+.then(data => console.log(data));
 ```
+
+**Speed Parameter Guide:**
+- `0.5` - Very slow (50% speed) - Great for learning
+- `0.7` - Slow (70% speed) - Clear pronunciation
+- `1.0` - Normal speed (default)
+- `1.3` - Slightly faster - Natural quick speech
+- `1.5` - Fast (150% speed) - Quick reading
+- `2.0` - Very fast (200% speed) - Maximum speed
+
+**Pitch Parameter Guide:**
+- `0.5` - Very low pitch - Deep voice
+- `0.8` - Low pitch - Lower tone
+- `1.0` - Normal pitch (default)
+- `1.2` - High pitch - Higher tone
+- `1.5` - Very high pitch
+- `2.0` - Maximum pitch
 
 ### GET /status
 Get service status and TTS engine information.
@@ -363,18 +410,20 @@ All permissions are declared in `AndroidManifest.xml` and automatically granted 
 - ✅ Queue management system
 - ✅ React Native UI with live monitoring
 - ✅ Comprehensive error handling
+- ✅ Dynamic speech speed control (0.5x - 2.0x)
+- ✅ Voice pitch adjustment (0.5 - 2.0)
 
 ## 🚀 Future Enhancements
 
 - [ ] Authentication/API keys for security
 - [ ] Support for more languages (Chinese, Japanese, Korean, etc.)
-- [ ] Dynamic voice configuration API (pitch, rate, volume control)
+- [ ] Volume control per request
 - [ ] Audio file export (WAV/MP3)
 - [ ] HTTPS support with SSL certificates
 - [ ] WebSocket support for real-time updates
 - [ ] Multiple voice profiles/personalities
 - [ ] Text preprocessing and SSML support
-- [ ] Voice effects (echo, reverb, speed change)
+- [ ] Voice effects (echo, reverb)
 - [ ] Audio streaming instead of local playback
 - [ ] REST API for voice list and selection
 - [ ] Batch processing of multiple texts
