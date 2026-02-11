@@ -26,7 +26,7 @@ class MusicPickerModule(private val reactContext: ReactApplicationContext) :
     
     @ReactMethod
     fun pickMusicFile(promise: Promise) {
-        val activity = currentActivity
+        val activity = reactContext.currentActivity
         if (activity == null) {
             promise.reject("NO_ACTIVITY", "Activity not available")
             return
@@ -49,7 +49,7 @@ class MusicPickerModule(private val reactContext: ReactApplicationContext) :
         }
         
         try {
-            activity.startActivityForResult(intent, PICK_AUDIO_FILE, null)
+            activity.startActivityForResult(intent, PICK_AUDIO_FILE)
         } catch (e: Exception) {
             promise.reject("PICKER_ERROR", "Failed to open file picker: ${e.message}", e)
             pickFilePromise = null
@@ -58,7 +58,7 @@ class MusicPickerModule(private val reactContext: ReactApplicationContext) :
     
     @ReactMethod
     fun pickMusicFolder(promise: Promise) {
-        val activity = currentActivity
+        val activity = reactContext.currentActivity
         if (activity == null) {
             promise.reject("NO_ACTIVITY", "Activity not available")
             return
@@ -72,7 +72,7 @@ class MusicPickerModule(private val reactContext: ReactApplicationContext) :
         }
         
         try {
-            activity.startActivityForResult(intent, PICK_AUDIO_FOLDER, null)
+            activity.startActivityForResult(intent, PICK_AUDIO_FOLDER)
         } catch (e: Exception) {
             promise.reject("PICKER_ERROR", "Failed to open folder picker: ${e.message}", e)
             pickFolderPromise = null
@@ -80,7 +80,7 @@ class MusicPickerModule(private val reactContext: ReactApplicationContext) :
     }
     
     override fun onActivityResult(
-        activity: Activity?,
+        activity: Activity,
         requestCode: Int,
         resultCode: Int,
         data: Intent?
@@ -190,7 +190,7 @@ class MusicPickerModule(private val reactContext: ReactApplicationContext) :
         return audioFiles
     }
     
-    override fun onNewIntent(intent: Intent?) {
+    override fun onNewIntent(intent: Intent) {
         // Not needed for this module
     }
 }

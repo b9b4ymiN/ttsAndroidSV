@@ -30,6 +30,7 @@ function App(): React.JSX.Element {
   const [currentTrack, setCurrentTrack] = useState('No music loaded');
   const [playlistSize, setPlaylistSize] = useState(0);
   const [trackNumber, setTrackNumber] = useState(0);
+  const [activeTab, setActiveTab] = useState<'tts' | 'music'>('tts');
 
   useEffect(() => {
     checkServiceStatus();
@@ -285,11 +286,37 @@ function App(): React.JSX.Element {
         <View style={styles.header}>
           <Text style={styles.title}>🎙️ TTS Voice Service</Text>
           <Text style={styles.subtitle}>Thai & English Text-to-Speech REST API</Text>
-          <Text style={styles.versionText}>v1.0.0 • Background Service</Text>
+          <Text style={styles.versionText}>v1.1.0 • TTS + Background Music 🎵</Text>
         </View>
 
-        {/* Enhanced Service Status Card */}
-        <View style={styles.statusCard}>
+        {/* Tab Navigation */}
+        <View style={styles.tabContainer}>
+          <TouchableOpacity
+            style={[styles.tab, activeTab === 'tts' && styles.tabActive]}
+            onPress={() => setActiveTab('tts')}>
+            <Text style={[styles.tabText, activeTab === 'tts' && styles.tabTextActive]}>
+              🔊 TTS Service
+            </Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.tab, activeTab === 'music' && styles.tabActive]}
+            onPress={() => setActiveTab('music')}>
+            <Text style={[styles.tabText, activeTab === 'music' && styles.tabTextActive]}>
+              🎵 Music Player
+            </Text>
+            {musicLoaded && (
+              <View style={styles.tabBadge}>
+                <Text style={styles.tabBadgeText}>{playlistSize}</Text>
+              </View>
+            )}
+          </TouchableOpacity>
+        </View>
+
+        {/* TTS Tab Content */}
+        {activeTab === 'tts' && (
+          <>
+            {/* Enhanced Service Status Card */}
+            <View style={styles.statusCard}>
           <View style={styles.statusHeader}>
             <Text style={styles.cardTitle}>🔊 Service Status</Text>
             {serviceRunning && (
@@ -348,10 +375,15 @@ function App(): React.JSX.Element {
               <Text style={styles.buttonText}>⏹️ Stop Service</Text>
             </TouchableOpacity>
           </View>
-        </View>
+            </View>
+          </>
+        )}
 
-        {/* Background Music Controls */}
-        <View style={styles.card}>
+        {/* Music Tab Content */}
+        {activeTab === 'music' && (
+          <>
+            {/* Background Music Controls */}
+            <View style={styles.card}>
           <Text style={styles.cardTitle}>🎵 Background Music</Text>
           
           {/* Track Info */}
@@ -547,9 +579,11 @@ function App(): React.JSX.Element {
             <Text style={styles.apiText}>GET {serverUrl}/status</Text>
             <Text style={styles.apiText}>GET {serverUrl}/health</Text>
           </View>
-        </View>
+            </View>
+          </>
+        )}
 
-        {/* Logs */}
+        {/* Logs - Always visible */}
         <View style={styles.card}>
           <Text style={styles.cardTitle}>Activity Logs</Text>
           <ScrollView style={styles.logsContainer} nestedScrollEnabled>
@@ -706,6 +740,49 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: '#666',
     marginTop: 4,
+  },
+  tabContainer: {
+    flexDirection: 'row',
+    marginBottom: 16,
+    backgroundColor: '#0f0f1e',
+    borderRadius: 8,
+    padding: 4,
+  },
+  tab: {
+    flex: 1,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderRadius: 6,
+    alignItems: 'center',
+    position: 'relative',
+  },
+  tabActive: {
+    backgroundColor: '#2a2a4e',
+  },
+  tabText: {
+    color: '#888',
+    fontSize: 14,
+    fontWeight: 'bold',
+  },
+  tabTextActive: {
+    color: '#4169e1',
+  },
+  tabBadge: {
+    position: 'absolute',
+    top: 4,
+    right: 4,
+    backgroundColor: '#9c27b0',
+    borderRadius: 10,
+    minWidth: 20,
+    height: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 6,
+  },
+  tabBadgeText: {
+    color: '#fff',
+    fontSize: 10,
+    fontWeight: 'bold',
   },
   buttonRow: {
     flexDirection: 'row',
