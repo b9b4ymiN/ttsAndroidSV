@@ -31,6 +31,7 @@ class TTSForegroundService : Service(), TextToSpeech.OnInitListener {
     private val ttsQueue = ConcurrentLinkedQueue<SpeechRequest>()
     private var isSpeaking = false
     private var ttsInitialized = false
+    private var musicManager: BackgroundMusicManager? = null
     
     companion object {
         private const val TAG = "TTSForegroundService"
@@ -40,11 +41,22 @@ class TTSForegroundService : Service(), TextToSpeech.OnInitListener {
         
         var isRunning = false
         var lastStatus = "Stopped"
+        
+        // Singleton instance for module access
+        private var instance: TTSForegroundService? = null
+        
+        fun getInstance(): TTSForegroundService? = instance
     }
     
     override fun onCreate() {
         super.onCreate()
         Log.d(TAG, "Service onCreate")
+        
+        // Set singleton instance
+        instance = this
+        
+        // Initialize BackgroundMusicManager
+        musicManager = BackgroundMusicManager(this)
         
         // Initialize TextToSpeech
         textToSpeech = TextToSpeech(this, this)
@@ -92,6 +104,11 @@ class TTSForegroundService : Service(), TextToSpeech.OnInitListener {
         isRunning = false
         lastStatus = "Stopped"
         
+        // Stop and release music
+        musicManager?.stop()
+        musicManager?.releasePlayer()
+        musicManager = null
+        
         // Stop HTTP server
         httpServer?.stop()
         httpServer = null
@@ -106,6 +123,9 @@ class TTSForegroundService : Service(), TextToSpeech.OnInitListener {
         wakeLock = null
         
         ttsQueue.clear()
+        
+        // Clear singleton instance
+        instance = null
     }
     
     override fun onInit(status: Int) {
@@ -152,12 +172,20 @@ class TTSForegroundService : Service(), TextToSpeech.OnInitListener {
                     override fun onDone(utteranceId: String?) {
                         Log.d(TAG, "TTS completed: $utteranceId")
                         isSpeaking = false
+                        
+                        // Resume music after TTS if it was playing
+                        musicManager?.resume()
+                        
                         processNextInQueue()
                     }
                     
                     override fun onError(utteranceId: String?) {
                         Log.e(TAG, "TTS error: $utteranceId")
                         isSpeaking = false
+                        
+                        // Resume music on error too
+                        musicManager?.resume()
+                        
                         processNextInQueue()
                     }
                 })
@@ -297,6 +325,12 @@ class TTSForegroundService : Service(), TextToSpeech.OnInitListener {
     
     private fun speakText(request: SpeechRequest) {
         textToSpeech?.let { tts ->
+            // Pause background music before speaking
+            if (musicManager?.isPlaying() == true) {
+                musicManager?.pause()
+                Log.d(TAG, "Music paused for TTS")
+            }
+            
             // Apply speech parameters BEFORE language detection
             tts.setSpeechRate(request.speed)
             tts.setPitch(request.pitch)
@@ -495,5 +529,59 @@ class TTSForegroundService : Service(), TextToSpeech.OnInitListener {
                 """{"status":"healthy"}"""
             )
         }
+    }
+    
+    // Public methods for music control (called from React Native modules)
+    
+    fun loadBackgroundMusic(uri: android.net.Uri) {
+        musicManager?.loadMusicFile(uri)
+        updateNotification("Music loaded: ${musicManager?.getCurrentTrackName()}")
+    }
+    
+    fun loadBackgroundPlaylist(uris: List<android.net.Uri>) {
+        musicManager?.loadPlaylist(uris)
+        updateNotification("Playlist loaded: ${musicManager?.getPlaylistSize()} tracks")
+    }
+    
+    fun playBackgroundMusic() {
+        musicManager?.play()
+        updateNotification("Playing: ${musicManager?.getCurrentTrackName()}")
+    }
+    
+    fun pauseBackgroundMusic() {
+        musicManager?.pause()
+        updateNotification("Music paused")
+    }
+    
+    fun stopBackgroundMusic() {
+        musicManager?.stop()
+        updateNotification("Music stopped")
+    }
+    
+    fun nextTrack() {
+        musicManager?.playNext()
+        updateNotification("Next: ${musicManager?.getCurrentTrackName()}")
+    }
+    
+    fun previousTrack() {
+        musicManager?.playPrevious()
+        updateNotification("Previous: ${musicManager?.getCurrentTrackName()}")
+    }
+    
+    fun setBackgroundMusicVolume(volume: Float) {
+        musicManager?.setVolume(volume)
+        Log.d(TAG, "Music volume set to: $volume")
+    }
+    
+    fun getMusicState(): Map<String, Any> {
+        return musicManager?.getMusicState() ?: mapOf(
+            "isPlaying" to false,
+            "isLoaded" to false,
+            "isPaused" to false,
+            "volume" to 0.5f,
+            "currentTrack" to "No music loaded",
+            "trackNumber" to 0,
+            "playlistSize" to 0
+        )
     }
 }

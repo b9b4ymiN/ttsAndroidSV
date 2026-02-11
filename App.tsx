@@ -13,7 +13,7 @@ import {
   Platform,
 } from 'react-native';
 
-const {TTSServiceModule} = NativeModules;
+const {TTSServiceModule, MusicPicker, MusicControl} = NativeModules;
 
 function App(): React.JSX.Element {
   const [serviceRunning, setServiceRunning] = useState(false);
@@ -24,6 +24,12 @@ function App(): React.JSX.Element {
   const [serverUrl, setServerUrl] = useState('http://localhost:8765');
   const [deviceIp, setDeviceIp] = useState('Detecting...');
   const [logs, setLogs] = useState<string[]>([]);
+  const [musicLoaded, setMusicLoaded] = useState(false);
+  const [musicPlaying, setMusicPlaying] = useState(false);
+  const [musicVolume, setMusicVolume] = useState(0.5);
+  const [currentTrack, setCurrentTrack] = useState('No music loaded');
+  const [playlistSize, setPlaylistSize] = useState(0);
+  const [trackNumber, setTrackNumber] = useState(0);
 
   useEffect(() => {
     checkServiceStatus();
@@ -166,6 +172,112 @@ function App(): React.JSX.Element {
     }
   };
 
+  // Music Control Functions
+  const pickMusicFile = async () => {
+    try {
+      const uri = await MusicPicker.pickMusicFile();
+      await MusicControl.loadMusic(uri);
+      await refreshMusicState();
+      addLog('🎵 Music file loaded');
+      Alert.alert('Success', 'Music file loaded successfully');
+    } catch (error: any) {
+      if (error.code !== 'CANCELLED') {
+        addLog(`❌ Failed to load music: ${error.message}`);
+        Alert.alert('Error', `Failed to load music: ${error.message}`);
+      }
+    }
+  };
+
+  const pickMusicFolder = async () => {
+    try {
+      const result = await MusicPicker.pickMusicFolder();
+      await MusicControl.loadPlaylist(result.audioFiles);
+      await refreshMusicState();
+      addLog(`🎵 Playlist loaded: ${result.count} tracks`);
+      Alert.alert('Success', `Playlist loaded with ${result.count} tracks`);
+    } catch (error: any) {
+      if (error.code !== 'CANCELLED') {
+        addLog(`❌ Failed to load playlist: ${error.message}`);
+        Alert.alert('Error', `Failed to load playlist: ${error.message}`);
+      }
+    }
+  };
+
+  const toggleMusic = async () => {
+    try {
+      if (musicPlaying) {
+        await MusicControl.pauseMusic();
+        addLog('⏸️ Music paused');
+      } else {
+        await MusicControl.playMusic();
+        addLog('▶️ Music playing');
+      }
+      await refreshMusicState();
+    } catch (error: any) {
+      addLog(`❌ Music control error: ${error.message}`);
+      Alert.alert('Error', error.message);
+    }
+  };
+
+  const stopMusic = async () => {
+    try {
+      await MusicControl.stopMusic();
+      await refreshMusicState();
+      addLog('⏹️ Music stopped');
+    } catch (error: any) {
+      addLog(`❌ Failed to stop music: ${error.message}`);
+    }
+  };
+
+  const nextTrack = async () => {
+    try {
+      await MusicControl.nextTrack();
+      await refreshMusicState();
+      addLog('⏭️ Next track');
+    } catch (error: any) {
+      addLog(`❌ Failed to skip: ${error.message}`);
+    }
+  };
+
+  const previousTrack = async () => {
+    try {
+      await MusicControl.previousTrack();
+      await refreshMusicState();
+      addLog('⏮️ Previous track');
+    } catch (error: any) {
+      addLog(`❌ Failed to go back: ${error.message}`);
+    }
+  };
+
+  const changeMusicVolume = async (volume: number) => {
+    try {
+      await MusicControl.setVolume(volume);
+      setMusicVolume(volume);
+    } catch (error: any) {
+      addLog(`❌ Volume error: ${error.message}`);
+    }
+  };
+
+  const refreshMusicState = async () => {
+    try {
+      const state = await MusicControl.getMusicState();
+      setMusicLoaded(state.isLoaded);
+      setMusicPlaying(state.isPlaying);
+      setMusicVolume(state.volume);
+      setCurrentTrack(state.currentTrack);
+      setPlaylistSize(state.playlistSize);
+      setTrackNumber(state.trackNumber);
+    } catch (error) {
+      // Ignore errors if service not running
+    }
+  };
+
+  // Refresh music state periodically
+  useEffect(() => {
+    const interval = setInterval(refreshMusicState, 3000);
+    return () => clearInterval(interval);
+  }, []);
+
   return (
     <SafeAreaView style={styles.container}>
       <StatusBar barStyle="light-content" backgroundColor="#1a1a2e" />
@@ -236,6 +348,93 @@ function App(): React.JSX.Element {
               <Text style={styles.buttonText}>⏹️ Stop Service</Text>
             </TouchableOpacity>
           </View>
+        </View>
+
+        {/* Background Music Controls */}
+        <View style={styles.card}>
+          <Text style={styles.cardTitle}>🎵 Background Music</Text>
+          
+          {/* Track Info */}
+          {musicLoaded && (
+            <View style={styles.trackInfo}>
+              <Text style={styles.trackName}>{currentTrack}</Text>
+              {playlistSize > 1 && (
+                <Text style={styles.trackCounter}>Track {trackNumber} of {playlistSize}</Text>
+              )}
+            </View>
+          )}
+          
+          {/* File Selection Buttons */}
+          <View style={styles.buttonRow}>
+            <TouchableOpacity
+              style={[styles.button, styles.musicButton]}
+              onPress={pickMusicFile}>
+              <Text style={styles.buttonText}>📁 Select File</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.button, styles.musicButton]}
+              onPress={pickMusicFolder}>
+              <Text style={styles.buttonText}>📂 Select Folder</Text>
+            </TouchableOpacity>
+          </View>
+          
+          {/* Playback Controls */}
+          {musicLoaded && (
+            <>
+              <View style={styles.buttonRow}>
+                <TouchableOpacity
+                  style={[styles.button, styles.musicControlButton]}
+                  onPress={previousTrack}
+                  disabled={playlistSize <= 1}>
+                  <Text style={styles.buttonText}>⏮️</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[styles.button, styles.musicControlButton, styles.playButton]}
+                  onPress={toggleMusic}>
+                  <Text style={styles.buttonText}>{musicPlaying ? '⏸️ Pause' : '▶️ Play'}</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[styles.button, styles.musicControlButton]}
+                  onPress={nextTrack}
+                  disabled={playlistSize <= 1}>
+                  <Text style={styles.buttonText}>⏭️</Text>
+                </TouchableOpacity>
+              </View>
+              
+              {/* Volume Control */}
+              <View style={styles.controlRow}>
+                <Text style={styles.controlLabel}>🔊 Volume: {Math.round(musicVolume * 100)}%</Text>
+                <View style={styles.sliderContainer}>
+                  <TouchableOpacity onPress={() => changeMusicVolume(Math.max(0, musicVolume - 0.1))}>
+                    <Text style={styles.sliderButton}>-</Text>
+                  </TouchableOpacity>
+                  <View style={styles.sliderTrack}>
+                    <View style={[styles.sliderFill, {width: `${musicVolume * 100}%`}]} />
+                    <Text style={styles.sliderValue}>{Math.round(musicVolume * 100)}%</Text>
+                  </View>
+                  <TouchableOpacity onPress={() => changeMusicVolume(Math.min(1, musicVolume + 0.1))}>
+                    <Text style={styles.sliderButton}>+</Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+              
+              <TouchableOpacity
+                style={[styles.button, styles.stopButton]}
+                onPress={stopMusic}>
+                <Text style={styles.buttonText}>⏹️ Stop Music</Text>
+              </TouchableOpacity>
+              
+              <Text style={styles.musicHint}>
+                💡 Music will pause automatically when TTS speaks
+              </Text>
+            </>
+          )}
+          
+          {!musicLoaded && (
+            <Text style={styles.musicHint}>
+              Select a music file or folder to play background music
+            </Text>
+          )}
         </View>
 
         {/* Test TTS */}
@@ -676,6 +875,43 @@ const styles = StyleSheet.create({
     fontSize: 12,
     marginBottom: 8,
     textAlign: 'center',
+  },
+  // Music Control Styles
+  trackInfo: {
+    backgroundColor: '#0f0f1e',
+    borderRadius: 8,
+    padding: 12,
+    marginBottom: 12,
+    borderWidth: 1,
+    borderColor: '#2a2a4e',
+  },
+  trackName: {
+    color: '#fff',
+    fontSize: 14,
+    fontWeight: 'bold',
+    marginBottom: 4,
+  },
+  trackCounter: {
+    color: '#888',
+    fontSize: 12,
+  },
+  musicButton: {
+    backgroundColor: '#9c27b0',
+  },
+  musicControlButton: {
+    backgroundColor: '#2a2a4e',
+    flex: 1,
+  },
+  playButton: {
+    backgroundColor: '#00aa55',
+    flex: 2,
+  },
+  musicHint: {
+    color: '#888',
+    fontSize: 12,
+    textAlign: 'center',
+    marginTop: 8,
+    fontStyle: 'italic',
   },
 });
 
